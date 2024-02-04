@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">BypassRootCheckPro</string>
+    <string name="description">Bypass Root Check Pro with Java and Native (C/C++) Hooks based on Modern Xposed API by LSPosed.</string>
+</resources>
