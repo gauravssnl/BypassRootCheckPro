@@ -1,5 +1,7 @@
 package com.gauravssnl.bypassrootcheck.pro
 
+import android.annotation.SuppressLint
+import android.content.pm.PackageManager
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedInterface.AfterHookCallback
 import io.github.libxposed.api.XposedInterface.BeforeHookCallback
@@ -9,6 +11,8 @@ import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.annotations.AfterInvocation
 import io.github.libxposed.api.annotations.BeforeInvocation
 import io.github.libxposed.api.annotations.XposedHooker
+import java.io.File
+import java.io.IOException
 
 private lateinit var module: MainModule
 
@@ -32,7 +36,7 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
             try {
                 hookRootDetections(param.classLoader)
             } catch (e: Exception) {
-                log("Failed to hook root detections.")
+                log("Failed to hook root detections. Exception :: ${e.stackTrace.contentToString()}")
             }
         } else {
             // Do something with other packages loaded by the app if we need
@@ -41,45 +45,14 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
 
     private fun hookRootDetections(classLoader: ClassLoader) {
         log("Trying to find RootBeerFresh classes & hook Java methods")
-        val fileClass = classLoader.loadClass("java.io.File")
-        hookClassMethod(fileClass, "exists");
-
-        val className1 = "com.scottyab.rootbeer.RootBeer";
-        val className2 = "com.kimchangyoun.rootbeerFresh.RootBeer";
-        val className3 = "com.scottyab.rootbeer.util.Utils";
-        val className4 = "com.kimchangyoun.rootbeerFresh.util.Utils";
-
-        val rootBeerClass = try {
-            classLoader.loadClass(className1);
-
-        } catch (e: ClassNotFoundException) {
-            log("Failed to find the class $className1. Try to find the class $className2")
-            classLoader.loadClass(className2);
-        }
-
-        val methodNameList1 = listOf("isRooted", "isRootedWithoutBusyBoxCheck",
-            "detectTestKeys", "isRootedWithBusyBoxCheck", "detectRootManagementApps",
-            "detectPotentiallyDangerousApps", "detectRootCloakingApps", "checkForDangerousProps",
-            "checkForRWPaths", "checkSuExists", "checkForNativeLibraryReadAccess")
-        hookClassMethods(rootBeerClass, methodNameList1);
-        val methodNameList2 = listOf("detectRootManagementApps", "detectPotentiallyDangerousApps", "detectRootCloakingApps")
-        hookClassMethods(rootBeerClass, methodNameList2, arrayOf<String>()::class.java)
-        hookClassMethod(rootBeerClass, "checkForBinary", String::class.java)
-        hookClassMethod(rootBeerClass, "setLogging", Boolean::class.javaPrimitiveType!!)
-        hookClassMethod(rootBeerClass, "isAnyPackageFromListInstalled", List::class.java)
-
-        val rootBeerUtilClass = try {
-            classLoader.loadClass(className3);
-
-        } catch (e: ClassNotFoundException) {
-            log("Failed to find the class $className3. Try to find the class $className4")
-            classLoader.loadClass(className4);
-        }
-        hookClassMethod(rootBeerUtilClass, "isSelinuxFlagInEnabled")
-
-
+        hookFileExists()
+        hookGetSystemProperties(classLoader)
+        hookPackageManagerGetPackageInfo(classLoader)
+        hookRuntimeExec()
         log("Java & Native Java (JNI / C / C++) code are hooked. All root detection bypassed :)")
     }
+
+    @Suppress("unused")
     @XposedHooker
     class MyHooker : XposedInterface.Hooker {
         companion object {
@@ -89,27 +62,43 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
 //                module.log("Inside beforeInvocation()")
                 when (callback.member.name) {
                     "setLogging" -> callback.args[0] = true // enable logging
-                    "checkForBinary" -> callback.returnAndSkip(false)
-                    "isRooted" -> callback.returnAndSkip(false)
-                    "isRootedWithoutBusyBoxCheck" -> callback.returnAndSkip(false)
-                    "isRootedWithBusyBoxCheck" -> callback.returnAndSkip(false)
-                    "detectTestKeys" -> callback.returnAndSkip(false)
-                    "detectRootManagementApps" -> callback.returnAndSkip(false)
-                    "detectPotentiallyDangerousApps" -> callback.returnAndSkip(false)
-                    "detectRootCloakingApps" -> callback.returnAndSkip(false)
-                    "isAnyPackageFromListInstalled" -> callback.returnAndSkip(false)
-                    "checkForDangerousProps" -> callback.returnAndSkip(false)
-                    "checkForRWPaths" -> callback.returnAndSkip(false)
-                    "checkSuExists" -> callback.returnAndSkip(false)
-                    "checkForNativeLibraryReadAccess" -> callback.returnAndSkip(true)
-                    "isSelinuxFlagInEnabled" -> callback.returnAndSkip(true)
                     "exists" -> {
-                        if (callback.args.isNotEmpty()) {
-                            val fileName = callback.args[0] as String
+                            val file = callback.thisObject as File
+                            val fileName = file.name
+                            module.log("Filename being checked :: $fileName")
                             // we immediately return false if root related files are checked
-                            if (fileName.contains("magisk") || fileName.contains("su")) callback.returnAndSkip(
-                                false
-                            )
+                            if (fileName.contains("magisk") || fileName.contains("su")
+                                || fileName.contains("busybox")) callback.returnAndSkip(false)
+                    }
+                    "getPackageInfo" -> {
+                        val packageName = callback.args[0] as String
+                        if(knownRootAppsPackages.contains(packageName)
+                            || knownDangerousAppsPackages.contains(packageName)
+                            || knownRootCloakingPackages.contains(packageName)) {
+                            callback.returnAndSkip(PackageManager.NameNotFoundException(packageName))
+                        }
+                    }
+                    "exec" -> {
+                        module.log("Inside exec hook. Callback args :: ${callback.args.contentToString()}")
+                        // Args can be either String or Array; so we need to handle
+                        val command: String = try {
+                            callback.args[0] as String
+                        } catch (e: ClassCastException) {
+                            val firstArg = callback.args[0] as Array<*>
+                            firstArg.joinToString(" ") { it.toString() }
+                        }
+                        module.log("Exec command was :: $command")
+                        if(command.contains("su") || command.contains("magisk")
+                            || command.contains("busybox") )
+                            callback.returnAndSkip(null);
+                        if(command.contains("getprop") || command.contains("mount"))
+                            callback.throwAndSkip(IOException("IO Error occurred"));
+                    }
+                    "get" -> {
+                        val propName =  callback.args[0] as String
+                        // Hook SELinux check
+                        if ("ro.build.selinux" == propName) {
+                            callback.returnAndSkip("1")
                         }
                     }
                 }
@@ -120,8 +109,47 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
             @AfterInvocation
             fun afterInvocation(callback: AfterHookCallback, param: MyHooker) {
 //                module.log("Inside afterInvocation()")
+                when(callback.member.name) {
+                    "get" -> {
+                        val propName =  callback.args[0] as String
+                        // Hook OS Build Tag check
+                        if ("ro.build.tags" == propName) {
+                            val res = callback.result as String
+                            callback.result = res.replace("test-keys", "")
+                        }
+                    }
+                }
             }
         }
+    }
+
+    @SuppressLint("PrivateApi")
+    private fun hookGetSystemProperties(classLoader: ClassLoader) {
+        val clazz = classLoader.loadClass("android.os.SystemProperties")
+        hookClassMethod(clazz, "get", String::class.java);
+        log("Hooked android.os.SystemProperties.get")
+    }
+
+    private fun hookFileExists() {
+        hookClassMethod(File::class.java, "exists");
+        log("Hooked File.exists")
+    }
+
+    @SuppressLint("PrivateApi")
+    private fun hookPackageManagerGetPackageInfo(classLoader: ClassLoader) {
+        val clazz = classLoader.loadClass("android.content.pm.PackageManager")
+        clazz.declaredMethods.filter { it.name == "exec" }.forEach{
+            hook(it, MyHooker::class.java)
+        }
+        log("Hooked hookPackageManagerGetPackageInfo")
+    }
+
+    private fun hookRuntimeExec() {
+        val clazz = Runtime::class.java
+        clazz.declaredMethods.filter { it.name == "exec" }.forEach{
+            hook(it, MyHooker::class.java)
+        }
+        log("Hooked Runtime.exec")
     }
 
     private fun hookClassMethod(clazz: Class<*>, methodName: String, vararg paramsClass: Class<*>) {
@@ -129,7 +157,8 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
         hook(method, MyHooker::class.java)
     }
 
-    private fun hookClassMethods(clazz: Class<*>, methodNameList: List<String>, vararg paramsClass: Class<*>) {
+    private fun hookClassMethods(clazz: Class<*>, methodNameList: List<String>,
+                                 vararg paramsClass: Class<*>) {
         methodNameList.forEach {
             val method = clazz.getDeclaredMethod(it, *paramsClass)
             hook(method, MyHooker::class.java)
