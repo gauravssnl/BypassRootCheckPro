@@ -104,11 +104,13 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
                     "checkForNativeLibraryReadAccess" -> callback.returnAndSkip(true)
                     "isSelinuxFlagInEnabled" -> callback.returnAndSkip(true)
                     "exists" -> {
-                        val fileName = callback.args[0] as String
-                        // we immediately return false if root related files are checked
-                        if (fileName.contains("magisk") || fileName.contains("su")) callback.returnAndSkip(
-                            false
-                        )
+                        if (callback.args.isNotEmpty()) {
+                            val fileName = callback.args[0] as String
+                            // we immediately return false if root related files are checked
+                            if (fileName.contains("magisk") || fileName.contains("su")) callback.returnAndSkip(
+                                false
+                            )
+                        }
                     }
                 }
                 return MyHooker()
