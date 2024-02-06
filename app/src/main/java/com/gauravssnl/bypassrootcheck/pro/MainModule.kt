@@ -65,10 +65,12 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
                     "exists" -> {
                             val file = callback.thisObject as File
                             val fileName = file.absolutePath
-                            module.log("Filename being checked :: $fileName")
+//                            module.log("Filename being accessed :: $fileName")
                             // we immediately return false if root related files are checked
-                            if (fileName.contains("magisk") || fileName.contains("su")
-                                || fileName.contains("busybox")) callback.returnAndSkip(false)
+                            if (isFileRootAccessRelated(fileName)) {
+                                module.log("App tried to access root related file :: $fileName , so bypass it")
+                                callback.returnAndSkip(false)
+                            }
                     }
                     "getPackageInfo" -> {
                         val packageName = callback.args[0] as String
@@ -79,7 +81,7 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
                         }
                     }
                     "exec" -> {
-                        module.log("Inside exec hook. Callback args :: ${callback.args.contentToString()}")
+//                        module.log("Inside exec hook. Callback args :: ${callback.args.contentToString()}")
                         // Args can be either String or Array; so we need to handle
                         val command: String = try {
                             callback.args[0] as String
@@ -87,7 +89,7 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
                             val firstArg = callback.args[0] as Array<*>
                             firstArg.joinToString(" ") { it.toString() }
                         }
-                        module.log("Exec command was :: $command")
+                        module.log("App tried to run Exec command  :: $command")
                         if(command.contains("su") || command.contains("magisk")
                             || command.contains("busybox") )
                             callback.returnAndSkip(null);
@@ -164,4 +166,12 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
             hook(method, MyHooker::class.java)
         }
     }
+
+}
+
+private fun isFileRootAccessRelated(fileName: String): Boolean {
+    return fileName.contains("magisk") || fileName.contains("su")
+            || fileName.contains("busybox") || fileName.contains("Superuser")
+            || fileName.contains("daemonsu") || fileName.contains("SuperSU")
+            || fileName.contains("/data/adb/.boot_count")
 }
