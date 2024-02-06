@@ -43,28 +43,42 @@ NativeOnModuleLoaded native_init(const NativeAPIEntries *entries) {
     // System Hooks
     hook_func((void *) fopen, (void *) fake_fopen, (void **) &original_fopen);
     hook_func((void *) stat, (void *) fake_stat, (void **) &original_stat);
+    hook_func((void *) lstat, (void *) fake_lstat, (void **) &original_lstat);
     LOGI("All System hooks applied for bypassing root check.)");
     return on_library_loaded;
 }
 
 FILE *fake_fopen(const char *filename, const char *mode) {
     LOGD("Inside fake_fopen. Filename :: %s", filename);
-    if (is_file_related_to_root(filename)) return nullptr;
+    if (is_file_related_to_root(filename)) {
+        LOGD("App tried to check root related files, so bypass it");
+        return nullptr;
+    }
     return original_fopen(filename, mode);
 }
 
 int fake_stat(const char *filename, struct stat *file_info) {
     LOGD("Inside fake_stat. Filename :: %s ", filename);
-    if (is_file_related_to_root(filename)) return -1;
+    if (is_file_related_to_root(filename)) {
+        LOGD("App tried to check root related files, so bypass it");
+        return -1;
+    }
     return original_stat(filename, file_info);
 }
 
 bool is_file_related_to_root(const char *filename) {
     if (strstr(filename, "su") || strstr(filename, "/proc/net/unix") ||
         strstr(filename, "magisk") || strstr(filename, "busybox") ||
-        strstr(filename, "/data/adb/.boot_count"))
+        strstr(filename, "/data/adb/.boot_count") || strstr(filename, "Superuser") ||
+        strstr(filename, "daemonsu") || strstr(filename, "SuperSU"))
         return true;
     return false;
+}
+
+int fake_lstat(const char *pathName, struct stat *buf) {
+    LOGD("Inside fake_lstat. Filename :: %s ", pathName);
+    if (is_file_related_to_root(pathName)) return -1;
+    return original_lstat(pathName, buf);
 }
 
 jint RootBeerNative_checkForMagiskUDS_Fake(JNIEnv *env, jobject thiz) {

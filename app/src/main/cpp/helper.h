@@ -15,6 +15,10 @@ int (*original_stat)(const char *, struct stat *);
 
 int fake_stat(const char *, struct stat *);
 
+int (*original_lstat)(const char *path, struct stat *buf);
+
+int fake_lstat(const char *path, struct stat *buf);
+
 jint (*RootBeerNative_setLogDebugMessages)(JNIEnv *env, jobject thiz, jboolean debug);
 
 jint (*RootBeerNative_checkForMagiskUDS)(JNIEnv *env, jobject thiz);
