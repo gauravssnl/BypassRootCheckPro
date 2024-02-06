@@ -64,7 +64,7 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
                     "setLogging" -> callback.args[0] = true // enable logging
                     "exists" -> {
                             val file = callback.thisObject as File
-                            val fileName = file.name
+                            val fileName = file.absolutePath
                             module.log("Filename being checked :: $fileName")
                             // we immediately return false if root related files are checked
                             if (fileName.contains("magisk") || fileName.contains("su")
