@@ -141,7 +141,7 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
         clazz.declaredMethods.filter { it.name == "exec" }.forEach{
             hook(it, MyHooker::class.java)
         }
-        log("Hooked hookPackageManagerGetPackageInfo")
+        log("Hooked PackageManagerGetPackageInfo")
     }
 
     private fun hookRuntimeExec() {
