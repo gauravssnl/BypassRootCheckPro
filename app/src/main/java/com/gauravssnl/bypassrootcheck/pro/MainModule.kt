@@ -59,13 +59,11 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
             @JvmStatic
             @BeforeInvocation
             fun beforeInvocation(callback: BeforeHookCallback): MyHooker {
-//                module.log("Inside beforeInvocation()")
                 when (callback.member.name) {
                     "setLogging" -> callback.args[0] = true // enable logging
                     "exists" -> {
                             val file = callback.thisObject as File
                             val fileName = file.absolutePath
-//                            module.log("Filename being accessed :: $fileName")
                             // we immediately return false if root related files are checked
                             if (isFileRootAccessRelated(fileName)) {
                                 module.log("App tried to access root related file :: $fileName , so bypass it")
@@ -77,11 +75,11 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
                         if(knownRootAppsPackages.contains(packageName)
                             || knownDangerousAppsPackages.contains(packageName)
                             || knownRootCloakingPackages.contains(packageName)) {
-                            callback.returnAndSkip(PackageManager.NameNotFoundException(packageName))
+                            module.log("App tried to read root related Android apps :: $packageName , so bypass it")
+                            callback.throwAndSkip(PackageManager.NameNotFoundException(packageName))
                         }
                     }
                     "exec" -> {
-//                        module.log("Inside exec hook. Callback args :: ${callback.args.contentToString()}")
                         // Args can be either String or Array; so we need to handle
                         val command: String = try {
                             callback.args[0] as String
@@ -110,7 +108,6 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
             @JvmStatic
             @AfterInvocation
             fun afterInvocation(callback: AfterHookCallback, param: MyHooker) {
-//                module.log("Inside afterInvocation()")
                 when(callback.member.name) {
                     "get" -> {
                         val propName =  callback.args[0] as String
@@ -139,7 +136,7 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
 
     @SuppressLint("PrivateApi")
     private fun hookPackageManagerGetPackageInfo(classLoader: ClassLoader) {
-        val clazz = classLoader.loadClass("android.content.pm.PackageManager")
+        val clazz = classLoader.loadClass("android.app.ApplicationPackageManager")
         clazz.declaredMethods.filter { it.name == "getPackageInfo" }.forEach{
             hook(it, MyHooker::class.java)
         }

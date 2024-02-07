@@ -51,7 +51,7 @@ NativeOnModuleLoaded native_init(const NativeAPIEntries *entries) {
 FILE *fake_fopen(const char *filename, const char *mode) {
     LOGD("Inside fake_fopen. Filename :: %s", filename);
     if (is_file_related_to_root(filename)) {
-        LOGD("App tried to check root related files, so bypass it");
+        LOGI("App tried to check root related files, so bypass it");
         return nullptr;
     }
     return original_fopen(filename, mode);
@@ -60,7 +60,7 @@ FILE *fake_fopen(const char *filename, const char *mode) {
 int fake_stat(const char *filename, struct stat *file_info) {
     LOGD("Inside fake_stat. Filename :: %s ", filename);
     if (is_file_related_to_root(filename)) {
-        LOGD("App tried to check root related files, so bypass it");
+        LOGI("App tried to check root related files, so bypass it");
         return -1;
     }
     return original_stat(filename, file_info);
