@@ -16,16 +16,7 @@ Bypass Root Check Pro Xposed Module with Java and Native (C/C++) Hooks based on 
 10. Bypass check for Unix Domain Socket used by Magisk.
 11. System Native Hooks in C/C++ apart from Java hooks to make root hiding possible.
 
-# Screenshots
-
-Before Module Activation 
-
-![ScreenShot](https://github.com/gauravssnl/BypassRootCheckPro/blob/main/screenshots/before.png)
-
-After Module Activation
-
-![ScreenShot](https://github.com/gauravssnl/BypassRootCheckPro/blob/main/screenshots/after.png)
-
+Screenshots have been provided at the end of this doc as a proof. Please have a look.
 
 # Requirements
 1. Rooted Android phone
@@ -65,3 +56,13 @@ For more details & updated logic, refer to the Kotlin/Java hooks code present in
 Made with ❤️ by @gauravssnl
 
 Pull Requests & contributions are welcome. If you like my work, give this repo a star and share.
+
+# Screenshots
+
+Before Module Activation 
+
+![ScreenShot](https://github.com/gauravssnl/BypassRootCheckPro/blob/main/screenshots/before.png)
+
+After Module Activation
+
+![ScreenShot](https://github.com/gauravssnl/BypassRootCheckPro/blob/main/screenshots/after.png)
