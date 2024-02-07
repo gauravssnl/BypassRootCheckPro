@@ -46,7 +46,7 @@ For more details & updated logic, refer to the C/C++ hooks code present in the r
 The below Java classes methods have been hooked to avoid root detection
 
     1. java.io.File.exists()
-    2. android.content.pm.PackageManager.getPackageInfo()
+    2. android.app.ApplicationPackageManager.getPackageInfo()
     3. Runtime.exec()
 
 For more details & updated logic, refer to the Kotlin/Java hooks code present in the repo.
