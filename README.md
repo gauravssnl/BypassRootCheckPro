@@ -16,6 +16,26 @@ Bypass Root Check Pro Xposed Module with Java and Native (C/C++) Hooks based on 
 10. Bypass check for Unix Domain Socket used by Magisk.
 11. System Native Hooks in C/C++ apart from Java hooks to make root hiding possible.
 
+# Screenshots
+
+Before Module Activation 
+
+![ScreenShot](https://github.com/gauravssnl/BypassRootCheckPro/blob/main/screenshots/before.png)
+
+After Module Activation
+
+![ScreenShot](https://github.com/gauravssnl/BypassRootCheckPro/blob/main/screenshots/after.png)
+
+
+# Requirements
+1. Rooted Android phone
+2. LSposed 
+
+# Usage
+
+Install this Xposed module in LSposed and activate the module. While activating the module, please select the desired app which perform root access check & you want to bypass.
+
+To test our module, we can install RootBeer Fresh sample application.
 
 # Implementation
 
@@ -39,13 +59,6 @@ The below Java classes methods have been hooked to avoid root detection
     3. Runtime.exec()
 
 For more details & updated logic, refer to the Kotlin/Java hooks code present in the repo.
-
-
-# Requirements
-1. Rooted Android phone
-2. LSposed 
-
-
 
 # Author
 
