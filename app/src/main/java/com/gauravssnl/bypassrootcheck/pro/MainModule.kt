@@ -140,7 +140,7 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
     @SuppressLint("PrivateApi")
     private fun hookPackageManagerGetPackageInfo(classLoader: ClassLoader) {
         val clazz = classLoader.loadClass("android.content.pm.PackageManager")
-        clazz.declaredMethods.filter { it.name == "exec" }.forEach{
+        clazz.declaredMethods.filter { it.name == "getPackageInfo" }.forEach{
             hook(it, MyHooker::class.java)
         }
         log("Hooked PackageManagerGetPackageInfo")
