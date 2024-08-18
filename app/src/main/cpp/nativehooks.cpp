@@ -67,7 +67,8 @@ int fake_stat(const char *filename, struct stat *file_info) {
 }
 
 bool is_file_related_to_root(const char *filename) {
-    if (strstr(filename, "su") || strstr(filename, "/proc/net/unix") ||
+    if ((strstr(filename, "su") && !strstr(filename, "measurement")) ||
+        strstr(filename, "/proc/net/unix") ||
         strstr(filename, "magisk") || strstr(filename, "busybox") ||
         strstr(filename, "/data/adb/.boot_count") || strstr(filename, "Superuser") ||
         strstr(filename, "daemonsu") || strstr(filename, "SuperSU"))

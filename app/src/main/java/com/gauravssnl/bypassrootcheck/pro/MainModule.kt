@@ -167,7 +167,8 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
 }
 
 private fun isFileRootAccessRelated(fileName: String): Boolean {
-    return fileName.contains("magisk") || fileName.contains("su")
+    return fileName.contains("magisk")
+            || (fileName.contains("su") && !fileName.contains("measurement"))
             || fileName.contains("busybox") || fileName.contains("Superuser")
             || fileName.contains("daemonsu") || fileName.contains("SuperSU")
             || fileName.contains("/data/adb/.boot_count")
