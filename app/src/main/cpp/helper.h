@@ -7,6 +7,9 @@
 #include <string>
 #include <jni.h>
 
+const std::string root_related_files[] = {"magisk", "su", "busybox", "Superuser", "SuperSU",
+                                          "daemonsu", "/data/adb/.boot_count", "/proc/net/unix"};
+
 FILE *(*original_fopen)(const char *filename, const char *mode);
 
 FILE *fake_fopen(const char *filename, const char *mode);
@@ -32,3 +35,5 @@ jint *RootBeerNative_checkForRoot_Fake(JNIEnv *env, jobject thiz, jobjectArray p
 jint RootBeerNative_setLogDebugMessages_Fake(JNIEnv *env, jobject thiz, jboolean);
 
 bool is_file_related_to_root(const char *filename);
+
+bool filepath_equals_or_ends_with(std::string filepath, std::string pattern);
