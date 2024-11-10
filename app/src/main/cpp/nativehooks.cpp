@@ -66,13 +66,15 @@ int fake_stat(const char *filename, struct stat *file_info) {
     return original_stat(filename, file_info);
 }
 
-bool is_file_related_to_root(const char *filename) {
-    if (strstr(filename, "su") || strstr(filename, "/proc/net/unix") ||
-        strstr(filename, "magisk") || strstr(filename, "busybox") ||
-        strstr(filename, "/data/adb/.boot_count") || strstr(filename, "Superuser") ||
-        strstr(filename, "daemonsu") || strstr(filename, "SuperSU"))
-        return true;
-    return false;
+bool is_file_related_to_root(const char *filepath) {
+    bool result = false;
+    for (const std::string &item: root_related_files) {
+        if (filepath_equals_or_ends_with(std::string(filepath), item)) {
+            result = true;
+            break;
+        }
+    }
+    return result;
 }
 
 int fake_lstat(const char *pathName, struct stat *buf) {
@@ -97,4 +99,8 @@ jint RootBeerNative_setLogDebugMessages_Fake(JNIEnv *env, jobject thiz, jboolean
     auto res = RootBeerNative_setLogDebugMessages(env, thiz, 1);
     LOGD("Debug flag set for RootBeerNative_setLogDebugMessages");
     return res;
+}
+
+bool filepath_equals_or_ends_with(std::string filepath, std::string pattern) {
+    return filepath == pattern || filepath.ends_with(pattern);
 }

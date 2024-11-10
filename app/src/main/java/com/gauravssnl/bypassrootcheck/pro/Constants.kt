@@ -56,3 +56,13 @@ val knownRootCloakingPackages = arrayOf(
     "com.formyhm.hiderootPremium",
     "com.formyhm.hideroot"
 )
+
+val rootRelatedFiles = arrayOf(
+    "magisk",
+    "su",
+    "busybox",
+    "Superuser",
+    "SuperSU",
+    "daemonsu",
+    "/data/adb/.boot_count"
+)
