@@ -8,11 +8,11 @@
 static HookFunType hook_func = nullptr;
 
 void on_library_loaded(const char *name, void *handle) {
-    LOGI("Library name : %s", name);
+    LOGD("Library name : %s", name);
     auto patterns1 = new std::string[]{"libtool-checker.so", "libtool_checker.so",
                                        "libtoolChecker.so"};
-    if (string_equals_any(std::string(name), patterns1)) {
-        LOGI("Trying to hook libtool Checker library :: %s", name);
+    if (string_ends_with_any(std::string(name), patterns1)) {
+        LOGV("Trying to hook libtool Checker library :: %s", name);
         // Root Beer Fresh & Root Beer hooks
         void *target1 = dlsym(handle,"Java_com_kimchangyoun_rootbeerFresh_RootBeerNative_checkForMagiskUDS");
         if (target1)
@@ -35,13 +35,13 @@ void on_library_loaded(const char *name, void *handle) {
         if (target5)
             hook_func(target1, (void *) RootBeerNative_setLogDebugMessages_Fake,
                       (void **) &RootBeerNative_setLogDebugMessages);
-        LOGI("All native hooks applied for RootBeer / RootBeer Fresh :)");
+        LOGV("All native hooks applied for RootBeer / RootBeer Fresh :)");
     }
 
     auto patterns2  = new std::string[]{"libapplist_detector.so", "libapplist-detector.so",
                 "libapplistDetector.so"};
-    if (string_equals_any(std::string(name),patterns2)) {
-        LOGI("Trying to hook lib app list detector library :: %s", name);
+    if (string_ends_with_any(std::string(name),patterns2)) {
+        LOGV("Trying to hook lib app list detector library :: %s", name);
         void *target1 = dlsym(handle,"Java_krypton_tbsafetychecker_appdetector_AbnormalEnvironment_detectDual");
         if (target1)
             hook_func(target1, (void *) tbsafetychecker_appdetector_AbnormalEnvironment_detectDual,
@@ -54,6 +54,7 @@ void on_library_loaded(const char *name, void *handle) {
         if (target3)
             hook_func(target3, (void *) tbsafetychecker_appdetector_FileDetection_nativeDetect,
                       (void **) &tbsafetychecker_appdetector_FileDetection_nativeDetect_Fake);
+        LOGV("All native hooks applied for TB Checker app list detector :)");
     }
 }
 
@@ -72,7 +73,7 @@ NativeOnModuleLoaded native_init(const NativeAPIEntries *entries) {
 FILE *fake_fopen(const char *filename, const char *mode) {
     LOGD("Inside fake_fopen. Filename :: %s", filename);
     if (is_file_related_to_root(filename)) {
-        LOGI("App tried to check root related files, so bypass it");
+        LOGI("App tried to check root related file %s, so bypass it", filename);
         return nullptr;
     }
     return original_fopen(filename, mode);
@@ -146,10 +147,10 @@ bool filepath_equals_or_ends_with(std::string filepath, std::string pattern) {
     return filepath == pattern || filepath.ends_with(pattern);
 }
 
-bool string_equals_any(std::string name, std::string patterns[]) {
+bool string_ends_with_any(std::string name, std::string patterns[]) {
     bool  result = false;
     for(auto index = 0; index < patterns->length(); index++) {
-        if (name == patterns[index]) {
+        if (name.ends_with(patterns[index])) {
             result = true;
             break;
         }

@@ -55,4 +55,4 @@ bool is_file_related_to_root(const char *filename);
 
 bool filepath_equals_or_ends_with(std::string filepath, std::string pattern);
 
-bool string_equals_any(std::string name, std::string patterns[]);
+bool string_ends_with_any(std::string name, std::string patterns[]);
