@@ -8,7 +8,10 @@
 static HookFunType hook_func = nullptr;
 
 void on_library_loaded(const char *name, void *handle) {
-    if (strstr(name, "libtool-checker.so") || strstr(name, "libtoolChecker.so")) {
+    LOGI("Library name : %s", name);
+    auto patterns1 = new std::string[]{"libtool-checker.so", "libtool_checker.so",
+                                       "libtoolChecker.so"};
+    if (string_equals_any(std::string(name), patterns1)) {
         LOGI("Trying to hook libtool Checker library :: %s", name);
         // Root Beer Fresh & Root Beer hooks
         void *target1 = dlsym(handle,"Java_com_kimchangyoun_rootbeerFresh_RootBeerNative_checkForMagiskUDS");
@@ -33,6 +36,24 @@ void on_library_loaded(const char *name, void *handle) {
             hook_func(target1, (void *) RootBeerNative_setLogDebugMessages_Fake,
                       (void **) &RootBeerNative_setLogDebugMessages);
         LOGI("All native hooks applied for RootBeer / RootBeer Fresh :)");
+    }
+
+    auto patterns2  = new std::string[]{"libapplist_detector.so", "libapplist-detector.so",
+                "libapplistDetector.so"};
+    if (string_equals_any(std::string(name),patterns2)) {
+        LOGI("Trying to hook lib app list detector library :: %s", name);
+        void *target1 = dlsym(handle,"Java_krypton_tbsafetychecker_appdetector_AbnormalEnvironment_detectDual");
+        if (target1)
+            hook_func(target1, (void *) tbsafetychecker_appdetector_AbnormalEnvironment_detectDual,
+                      (void **) &tbsafetychecker_appdetector_AbnormalEnvironment_detectDual_Fake);
+        void *target2 = dlsym(handle,"Java_krypton_tbsafetychecker_appdetector_AbnormalEnvironment_detectXposed");
+        if (target2)
+            hook_func(target2, (void *) tbsafetychecker_appdetector_AbnormalEnvironment_detectXposed,
+                      (void **) &tbsafetychecker_appdetector_AbnormalEnvironment_detectXposed_Fake);
+        void *target3 = dlsym(handle,"Java_krypton_tbsafetychecker_appdetector_FileDetection_nativeDetect");
+        if (target3)
+            hook_func(target3, (void *) tbsafetychecker_appdetector_FileDetection_nativeDetect,
+                      (void **) &tbsafetychecker_appdetector_FileDetection_nativeDetect_Fake);
     }
 }
 
@@ -67,14 +88,18 @@ int fake_stat(const char *filename, struct stat *file_info) {
 }
 
 bool is_file_related_to_root(const char *filepath) {
-    bool result = false;
-    for (const std::string &item: root_related_files) {
-        if (filepath_equals_or_ends_with(std::string(filepath), item)) {
-            result = true;
-            break;
+    for (const std::string &item: root_related_dirs) {
+        if (std::string(filepath).starts_with(item)) {
+            return true;
         }
     }
-    return result;
+
+    for (const std::string &item: root_related_files) {
+        if (filepath_equals_or_ends_with(std::string(filepath), item)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 int fake_lstat(const char *pathName, struct stat *buf) {
@@ -101,6 +126,33 @@ jint RootBeerNative_setLogDebugMessages_Fake(JNIEnv *env, jobject thiz, jboolean
     return res;
 }
 
+jboolean tbsafetychecker_appdetector_AbnormalEnvironment_detectDual_Fake(JNIEnv *env, jobject thiz) {
+        LOGD("Inside tbsafetychecker_appdetector_AbnormalEnvironment_detectDual_Fake");
+    return 0;
+}
+
+jboolean tbsafetychecker_appdetector_AbnormalEnvironment_detectXposed_Fake(JNIEnv *env, jobject thiz) {
+    LOGD("Inside tbsafetychecker_appdetector_AbnormalEnvironment_detectXposed_Fake");
+    return 0;
+}
+
+jint tbsafetychecker_appdetector_FileDetection_nativeDetect_Fake(JNIEnv *env, jclass clazz, jstring str, jboolean flag) {
+    LOGD("Inside tbsafetychecker_appdetector_FileDetection_nativeDetect_Fake");
+    LOGD("Params passed are :: %s and  % d ", env->GetStringUTFChars(str, NULL), flag);
+    return -1;
+}
+
 bool filepath_equals_or_ends_with(std::string filepath, std::string pattern) {
     return filepath == pattern || filepath.ends_with(pattern);
+}
+
+bool string_equals_any(std::string name, std::string patterns[]) {
+    bool  result = false;
+    for(auto index = 0; index < patterns->length(); index++) {
+        if (name == patterns[index]) {
+            result = true;
+            break;
+        }
+    }
+    return result;
 }

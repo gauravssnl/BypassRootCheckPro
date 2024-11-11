@@ -40,6 +40,7 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
             }
         } else {
             // Do something with other packages loaded by the app if we need
+            log("Non-first package name ${param.packageName}")
         }
     }
 
@@ -167,12 +168,16 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
 }
 
 private fun isFileRootAccessRelated(filePath: String): Boolean {
-    var result = false
-    for (file in rootRelatedFiles) {
-        if (Utils.filePathEqualsOrEndsWith(filePath, file)) {
-            result = true
-            break
+    for (file in rootRelatedDirs) {
+        if(filePath.startsWith(file)) {
+            return true
         }
     }
-    return result
+
+    for (file in rootRelatedFiles) {
+        if (Utils.filePathEqualsOrEndsWith(filePath, file)) {
+            return true
+        }
+    }
+    return false
 }

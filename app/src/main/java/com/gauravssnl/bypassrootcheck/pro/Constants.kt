@@ -64,5 +64,17 @@ val rootRelatedFiles = arrayOf(
     "Superuser",
     "SuperSU",
     "daemonsu",
+    "/data/adb/magisk.db",
     "/data/adb/.boot_count"
+)
+
+val rootRelatedDirs = arrayOf(
+    "/data/adb/modules",
+    "/data/adb/lspd",
+    "/data/adb/shamiko",
+    "/data/adb/sui",
+    "/data/adb/storage-isolation",
+    "/data/adb/appops",
+    "/data/adb/ksud",
+    "data/system/xlua"
 )
