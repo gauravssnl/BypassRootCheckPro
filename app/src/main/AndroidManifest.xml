@@ -10,7 +10,6 @@
         android:label="@string/app_name"
         android:description="@string/description"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        tools:targetApi="31" />
+        android:supportsRtl="true" />
 
 </manifest>
