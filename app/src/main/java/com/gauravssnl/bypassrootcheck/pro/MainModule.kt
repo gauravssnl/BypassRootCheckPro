@@ -2,31 +2,28 @@ package com.gauravssnl.bypassrootcheck.pro
 
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.util.Log
 import io.github.libxposed.api.XposedInterface
-import io.github.libxposed.api.XposedInterface.AfterHookCallback
-import io.github.libxposed.api.XposedInterface.BeforeHookCallback
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface
-import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
-import io.github.libxposed.api.annotations.AfterInvocation
-import io.github.libxposed.api.annotations.BeforeInvocation
-import io.github.libxposed.api.annotations.XposedHooker
 import java.io.File
 import java.io.IOException
 
-private lateinit var module: MainModule
+class MainModule : XposedModule() {
 
-class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule(base, param) {
-    init {
-        log("MainModule at :: " + param.processName)
-        module = this
+    companion object {
+        private const val TAG = "RootBypass"
     }
+
+    private fun log(text: String) = log(Log.INFO, TAG, text)
+
+    private val myHooker = MyHooker(::log)
 
     override fun onPackageLoaded(param: XposedModuleInterface.PackageLoadedParam) {
         super.onPackageLoaded(param)
         log("onPackageLoaded :: ${param.packageName}")
-        log("param classloader is ::  ${param.classLoader}")
-        log("module apk path is :: ${this.applicationInfo.sourceDir}")
+        log("param classloader is ::  ${param.defaultClassLoader}")
+        log("module apk path is :: ${this.moduleApplicationInfo.sourceDir}")
         log("----------------------------")
         if (param.isFirstPackage) {
             log("First package loaded")
@@ -34,7 +31,7 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
             System.loadLibrary("nativehooks")
             log(" Native lib loaded for hooking root detection & bypass them :)")
             try {
-                hookRootDetections(param.classLoader)
+                hookRootDetections(param.defaultClassLoader)
             } catch (e: Exception) {
                 log("Failed to hook root detections. Exception :: ${e.stackTrace.contentToString()}")
             }
@@ -52,71 +49,110 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
         log("Java & Native Java (JNI / C / C++) code are hooked. All root detection bypassed :)")
     }
 
-    @Suppress("unused")
-    @XposedHooker
-    class MyHooker : XposedInterface.Hooker {
-        companion object {
-            @JvmStatic
-            @BeforeInvocation
-            fun beforeInvocation(callback: BeforeHookCallback): MyHooker {
-                when (callback.member.name) {
-                    "setLogging" -> callback.args[0] = true // enable logging
-                    "exists" -> {
-                            val file = callback.thisObject as File
-                            val fileName = file.absolutePath
-                            // we immediately return false if root related files are checked
-                            if (isFileRootAccessRelated(fileName)) {
-                                module.log("App tried to access root related file :: $fileName , so bypass it")
-                                callback.returnAndSkip(false)
-                            }
-                    }
-                    "getPackageInfo" -> {
-                        val packageName = callback.args[0] as String
-                        if(knownRootAppsPackages.contains(packageName)
-                            || knownDangerousAppsPackages.contains(packageName)
-                            || knownRootCloakingPackages.contains(packageName)) {
-                            module.log("App tried to read root related Android apps :: $packageName , so bypass it")
-                            callback.throwAndSkip(PackageManager.NameNotFoundException(packageName))
-                        }
-                    }
-                    "exec" -> {
-                        // Args can be either String or Array; so we need to handle
-                        val command: String = try {
-                            callback.args[0] as String
-                        } catch (e: ClassCastException) {
-                            val firstArg = callback.args[0] as Array<*>
-                            firstArg.joinToString(" ") { it.toString() }
-                        }
-                        module.log("App tried to run Exec command  :: $command")
-                        if(command.contains("su") || command.contains("magisk")
-                            || command.contains("busybox") )
-                            callback.returnAndSkip(null);
-                        if(command.contains("getprop") || command.contains("mount"))
-                            callback.throwAndSkip(IOException("IO Error occurred"));
-                    }
-                    "get" -> {
-                        val propName =  callback.args[0] as String
-                        // Hook SELinux check
-                        if ("ro.build.selinux" == propName) {
-                            callback.returnAndSkip("1")
-                        }
-                    }
-                }
-                return MyHooker()
-            }
 
-            @JvmStatic
-            @AfterInvocation
-            fun afterInvocation(callback: AfterHookCallback, param: MyHooker) {
-                when(callback.member.name) {
-                    "get" -> {
-                        val propName =  callback.args[0] as String
-                        // Hook OS Build Tag check
-                        if ("ro.build.tags" == propName) {
-                            val res = callback.result as String
-                            callback.result = res.replace("test-keys", "")
-                        }
+
+    class MyHooker(private val log: (String) -> Unit) : XposedInterface.Hooker {
+
+        override fun intercept(chain: XposedInterface.Chain): Any? {
+            val method = chain.executable
+            val args = chain.args
+
+            when (method.name) {
+
+                "setLogging" -> {
+                    // enable logging
+                    args[0] = true
+
+                    return chain.proceed()
+                }
+
+                "exists" -> {
+                    val file = chain.thisObject as File
+                    val fileName = file.absolutePath
+
+                    // Immediately return false if root-related files are checked
+                    if (isFileRootAccessRelated(fileName)) {
+                        log(
+                            "App tried to access root related file :: $fileName, so bypass it"
+                        )
+
+                        return false
                     }
+
+                    return chain.proceed()
+                }
+
+                "getPackageInfo" -> {
+                    val packageName = args[0] as String
+
+                    if (
+                        knownRootAppsPackages.contains(packageName) ||
+                        knownDangerousAppsPackages.contains(packageName) ||
+                        knownRootCloakingPackages.contains(packageName)
+                    ) {
+                        log(
+                            "App tried to read root related Android apps :: " +
+                                    "$packageName, so bypass it"
+                        )
+
+                        throw PackageManager.NameNotFoundException(packageName)
+                    }
+
+                    return chain.proceed()
+                }
+
+                "exec" -> {
+                    val command = when (val arg = args[0]) {
+                        is String -> arg
+                        is Array<*> -> arg.joinToString(" ") { it.toString() }
+                        else -> arg.toString()
+                    }
+
+                    log(
+                        "App tried to run Exec command :: $command"
+                    )
+
+                    if (
+                        command.contains("su") ||
+                        command.contains("magisk") ||
+                        command.contains("busybox")
+                    ) {
+                        // Equivalent to returnAndSkip(null)
+                        return null
+                    }
+
+                    if (
+                        command.contains("getprop") ||
+                        command.contains("mount")
+                    ) {
+                        // Equivalent to throwAndSkip(...)
+                        throw IOException("IO Error occurred")
+                    }
+
+                    return chain.proceed()
+                }
+
+                "get" -> {
+                    val propName = args[0] as String
+
+                    // Hook SELinux check
+                    if (propName == "ro.build.selinux") {
+                        return "1"
+                    }
+
+                    val result = chain.proceed()
+
+                    // Hook OS Build Tag check
+                    if (propName == "ro.build.tags") {
+                        return (result as? String)
+                            ?.replace("test-keys", "")
+                    }
+
+                    return result
+                }
+
+                else -> {
+                    return chain.proceed()
                 }
             }
         }
@@ -138,7 +174,7 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
     private fun hookPackageManagerGetPackageInfo(classLoader: ClassLoader) {
         val clazz = classLoader.loadClass("android.app.ApplicationPackageManager")
         clazz.declaredMethods.filter { it.name == "getPackageInfo" }.forEach{
-            hook(it, MyHooker::class.java)
+            hook(it).intercept(myHooker)
         }
         log("Hooked PackageManagerGetPackageInfo")
     }
@@ -146,21 +182,21 @@ class MainModule(base: XposedInterface, param: ModuleLoadedParam) : XposedModule
     private fun hookRuntimeExec() {
         val clazz = Runtime::class.java
         clazz.declaredMethods.filter { it.name == "exec" }.forEach{
-            hook(it, MyHooker::class.java)
+            hook(it).intercept(myHooker)
         }
         log("Hooked Runtime.exec")
     }
 
     private fun hookClassMethod(clazz: Class<*>, methodName: String, vararg paramsClass: Class<*>) {
         val method = clazz.getDeclaredMethod(methodName, *paramsClass)
-        hook(method, MyHooker::class.java)
+        hook(method).intercept(myHooker)
     }
 
     private fun hookClassMethods(clazz: Class<*>, methodNameList: List<String>,
                                  vararg paramsClass: Class<*>) {
         methodNameList.forEach {
             val method = clazz.getDeclaredMethod(it, *paramsClass)
-            hook(method, MyHooker::class.java)
+            hook(method).intercept(myHooker)
         }
     }
 
