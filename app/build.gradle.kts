@@ -6,6 +6,7 @@ plugins {
 android {
     namespace = "com.gauravssnl.bypassrootcheck.pro"
     compileSdk = 34
+    ndkVersion = "28.2.13676358"
 
     defaultConfig {
         applicationId = "com.gauravssnl.bypassrootcheck.pro"
@@ -48,6 +49,7 @@ android {
 }
 
 dependencies {
-    compileOnly(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
+    // libxposed API 102 (vendored classes.jar: the published AAR requires compileSdk 37)
+    compileOnly(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
     compileOnly("androidx.annotation:annotation:1.7.1") // required only for Java Module
 }
