@@ -1,6 +1,6 @@
 # Bypass Root Check Pro
 
-Bypass Root Check Pro Xposed Module with Java and Native (C/C++) Hooks based on Modern Xposed API by LSPosed. This module bypasses root checks the pro way. This module not only hooks Java logic, but also hooks Native / System calls logic (logic written in C/C++/ Native Java code).
+Bypass Root Check Pro Xposed Module with Java and Native (C/C++) Hooks based on the Modern Xposed API by LSPosed (libxposed API 102). This module bypasses root checks the pro way. This module not only hooks Java logic, but also hooks Native / System calls logic (logic written in C/C++/ Native Java code).
 
 # Features
 
@@ -20,7 +20,14 @@ Screenshots have been provided at the end of this doc as a proof. Please have a 
 
 # Requirements
 1. Rooted Android phone
-2. LSposed 
+2. LSPosed 2.0+ (libxposed API 102 support). The module targets API 102 and requires at least API 101 at runtime.
+
+# Building
+1. JDK 17 or newer
+2. Android SDK 34 and NDK `28.2.13676358`
+3. Run `./gradlew assembleDebug`
+
+`app/libs/libxposed-api-102.jar` is the `classes.jar` of `io.github.libxposed:api:102.0.0`, vendored because the official AAR declares `minCompileSdk=37` and otherwise forces AGP 9.x with `compileSdk = 37`.
 
 # Usage
 
@@ -42,6 +49,8 @@ The below Native System calls have been hooked to avoid root detection
 For more details & updated logic, refer to the C/C++ hooks code present in the repo.
 
 ### Java Hooks
+
+Java hooks use the API 102 interceptor-chain model (`hook(executable).intercept { chain -> ... }`); the old `@XposedHooker` / `@BeforeInvocation` / `@AfterInvocation` API no longer exists in API 102.
 
 The below Java classes methods have been hooked to avoid root detection
 
